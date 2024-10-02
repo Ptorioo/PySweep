@@ -35,9 +35,11 @@ class Tile(pygame.sprite.Sprite):
         if not self.is_revealed:
             self.is_flagged = not self.is_flagged
             if self.is_flagged:
-                self.image.fill(YELLOW)
+                self.inside.fill(YELLOW)
             else:
-                self.image.fill(LIGHTGREY)
+                self.inside.fill(LIGHTGREY)
+        self.image.blit(self.inside,(2, 2))
+
 class Grid(pygame.sprite.Group):
     def __init__(self, rows, cols, tile_size):
         super().__init__()
@@ -56,7 +58,7 @@ class Grid(pygame.sprite.Group):
 
         self.place_mines()
 
-    def place_mines(self, num_mines = 20):
+    def place_mines(self, num_mines=20):
         mines_placed = 0
         while mines_placed < num_mines:
             row = random.randint(0, self.rows - 1)
@@ -109,13 +111,20 @@ class Grid(pygame.sprite.Group):
                     neighbor_tile.reveal()
                     if neighbor_tile.neighboring_mines == 0:
                         self.reveal_neighbors(r, c)
+
+    def check_win(self):
+        for row in self.tiles:
+            for tile in row:
+                if not tile.is_mine and not tile.is_revealed:
+                    return False
+        return True
+
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((RESOLUTION))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
         self.grid = Grid(DIMENSION, DIMENSION, TILESIZE)
-        self.playing = True
         self.game_over = False
 
     def new(self):
@@ -124,10 +133,11 @@ class Game:
         self.game_over = False  # Reset game-over state
 
     def run(self):
-        while self.playing:
+        while not self.game_over:
             self.clock.tick(FPS)
             self.event()
             self.draw()
+        pygame.time.wait(1000)
 
     def draw(self):
         self.screen.fill(DARKGREY)
@@ -147,8 +157,10 @@ class Game:
                     mine_hit = self.grid.reveal_tile(row, col)
                     if mine_hit:
                         self.game_over = True
-                        print("Game Over!")
                         self.grid.reveal_all_mines()
+                    elif self.grid.check_win():
+                        self.game_over = True
+                        print("You win!")
                 elif event.button == 3:  # Right click
                     self.grid.tiles[row][col].toggle_flag()
 
