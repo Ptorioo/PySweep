@@ -1,188 +1,159 @@
-import pygame
-from pygame.locals import *
-from random import shuffle
-
-pygame.init()
-font = pygame.font.SysFont("calibri", 14)
-bigfont = pygame.font.SysFont("calibri", 40)
-colors = {'white': (255,255,255), 'black': (0, 0, 0), 'grey': (169, 169, 169), 'red': (255, 0, 0), 'orange': (255, 165, 0), 'brickred': (178, 34, 34), 'blue': (0, 0, 205)}
-size = 20
-
+from const import *
+import random
 class Tile(pygame.sprite.Sprite):
-	def __init__(self):
-		pygame.sprite.Sprite.__init__(self)
-		self.border = pygame.Surface((size, size))
-		self.inside = pygame.Surface((size - 2, size - 2))
-		self.image = pygame.Surface((size, size))
-		
-		self.border.fill(colors['black'])
-		self.inside.fill( colors['grey'])
-		self.image.blit(self.border,(0, 0))
-		self.image.blit(self.inside,(2, 2))
-		self.rect = self.image.get_rect()
-		self.checked, self.isBomb, self.flagged = False, False, False
-		self.num = 0
-		
-	def Check(self):
-		if not self.checked:
-			if (self.isBomb):
-				self.inside.fill( colors['red'])
-			else:
-				self.inside.fill(colors['white'])
-				if (self.num != 0):
-					numtext = font.render(str(self.num), True, colors['black'])
-					self.inside.blit(numtext,(self.rect.width / 4,numtext.get_height() / 4))
-			self.image.blit(self.inside,(2, 2))
-			self.checked = True
-		
-	def Flag(self):
-		if not self.checked:
-			if self.flagged:
-				self.flagged = False
-				self.inside.fill(colors['grey'])
-				self.image.blit(self.inside, (2, 2))
-				return False
-			else:
-				self.flagged = True
-				flag = pygame.Surface((self.inside.get_width() - 4, self.inside.get_height() - 4))
-				flag.fill( colors['orange'])
-				self.inside.blit(flag,(2, 2))
-				self.image.blit(self.inside,(2, 2))
-				return True
-		else:
-			return False
+    def __init__(self, x, y, size):
+        super().__init__()
+        self.image = pygame.Surface((size, size))
+        self.inside = pygame.Surface((size - 2, size - 2))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
 
-class Grid(pygame.sprite.Group):
-	def __init__(self):
-		pygame.sprite.Group.__init__(self)
-		self.dimensions = (16, 16)
-		self.bombs = 40
-		test = list(range(self.dimensions[0] * self.dimensions[1]))
-		shuffle(test)
-		for i in range(self.dimensions[0]):
-			for j in range(self.dimensions[1]):
-				temp = Tile()
-				temp.rect.topleft = (i * size, j * size)
-				if (test.pop() < self.bombs):
-					temp.isBomb = True
-				else:
-					temp.isBomb = False
-				self.add(temp)
-		
-		for t in self.sprites():
-			if t.isBomb == False:
-				temp = pygame.sprite.Sprite()
-				temp.rect = t.rect.copy()
-				temp.rect.inflate_ip(2, 2)
-				intersect = pygame.sprite.spritecollide(temp, self, False)
-				for i in intersect:
-					if i.isBomb:
-						t.num += 1
-				
-def main():
-    grid = Grid()
+        self.image.fill(BLACK)
+        self.inside.fill(LIGHTGREY)
+        self.image.blit(self.image,(0, 0))
+        self.image.blit(self.inside,(2, 2))
 
-    flags, correctFlags = 0, 0
+        # Tile states
+        self.is_mine = False
+        self.is_revealed = False
+        self.is_flagged = False
+        self.neighboring_mines = 0
 
-    resolution = (grid.dimensions[0] * size + 2, grid.dimensions[1] * size + 32)
-    screen = pygame.display.set_mode(resolution)
-    info = pygame.Surface((grid.dimensions[0] * size + 2, 30))
-    info.fill(colors['white'])
-
-    clock = pygame.time.Clock()
-    gamestart, lbuttonpress, rbuttonpress, won, lost = False, False, False, False, False
-    lose_time = None
-
-    pygame.mouse.set_visible(True)
-
-    while True:
-        clock.tick(60)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                return
-            elif event.type == MOUSEBUTTONDOWN:
-                if pygame.mouse.get_pressed()[0] and not lbuttonpress:
-                    lbuttonpress = True
-                if pygame.mouse.get_pressed()[2] and not rbuttonpress:
-                    rbuttonpress = True
-            elif event.type == MOUSEBUTTONUP:
-                if not pygame.mouse.get_pressed()[0] and lbuttonpress:
-                    if not gamestart:
-                        gamestart = True
-                        starttime = pygame.time.get_ticks()
-
-                    lbuttonpress = False
-                    mousesprite = pygame.sprite.Sprite()
-
-                    if won or lost:
-                        grid = Grid()
-                        flags, correctFlags = 0, 0
-                        starttime = pygame.time.get_ticks()
-                        won, lost = False, False
-
-                    mousesprite.rect = pygame.Rect(pygame.mouse.get_pos(), (1, 1))
-                    mintersect = pygame.sprite.spritecollide(mousesprite, grid, False)
-
-                    if mintersect:
-                        for m in mintersect:
-                            m.Check()
-                            if m.isBomb:
-                                lost = True
-                                lose_time = pygame.time.get_ticks()
-                            elif not m.isBomb and m.num == 0:
-                                temp = pygame.sprite.Sprite()
-                                temp.rect = m.rect.copy()
-                                temp.rect.inflate_ip(2, 2)
-                                rintersect = pygame.sprite.spritecollide(temp, grid, False)
-                                for r in rintersect:
-                                    if not r.checked and not any(item.rect == r.rect for item in mintersect):
-                                        mintersect.append(r)
-
-                if not pygame.mouse.get_pressed()[2] and rbuttonpress:
-                    rbuttonpress = False
-                    mousesprite = pygame.sprite.Sprite()
-                    mousesprite.rect = pygame.Rect(pygame.mouse.get_pos(), (1, 1))
-                    intersect = pygame.sprite.spritecollide(mousesprite, grid, False)
-
-                    if intersect:
-                        for i in intersect:
-                            if i.Flag():
-                                flags += 1
-                                if i.isBomb:
-                                    correctFlags += 1
-                                    if correctFlags == grid.bombs:
-                                        won = True
-                            else:
-                                flags -= 1
-                                if i.isBomb:
-                                    correctFlags -= 1
-
-        grid.draw(screen)
-        screen.blit(info, (0, grid.dimensions[0] * size + 3))
-
-        if not won and not lost:
-            if gamestart:
-                currenttime = int((pygame.time.get_ticks() - starttime) / 1000)
-                info.fill(colors['white'])
-                timetext = font.render('Time: ' + str(currenttime), True, colors['black'])
-                info.blit(timetext, (0, 0))
-                flagstext = font.render('Flags: ' + str(flags), True, colors['black'])
-                info.blit(flagstext, (resolution[0] / 2, 0))
+    def reveal(self):
+        self.is_revealed = True
+        if self.is_mine:
+            self.inside.fill(RED)
         else:
-            if won:
-                endtext = bigfont.render('You win!', True, colors['blue'])
+            self.inside.fill(WHITE)
+            if self.neighboring_mines > 0:
+                font = pygame.font.SysFont("calibri", 14)
+                text = font.render(str(self.neighboring_mines), True, BLACK)
+                self.inside.blit(text, (self.rect.width / 4, self.rect.height / 4))
+        self.image.blit(self.inside,(2, 2))
+
+    def toggle_flag(self):
+        if not self.is_revealed:
+            self.is_flagged = not self.is_flagged
+            if self.is_flagged:
+                self.image.fill(YELLOW)
             else:
-                endtext = bigfont.render('You lose!', True, colors['brickred'])
-            screen.blit(endtext, (resolution[0] / 2 - endtext.get_width() / 2, (resolution[1] - 30) / 2 - endtext.get_height() / 2))
+                self.image.fill(LIGHTGREY)
+class Grid(pygame.sprite.Group):
+    def __init__(self, rows, cols, tile_size):
+        super().__init__()
+        self.rows = rows
+        self.cols = cols
+        self.tile_size = tile_size
+        self.tiles = []
 
-            if lost and lose_time and pygame.time.get_ticks() - lose_time > 1000:
-                grid = Grid()
-                flags, correctFlags = 0, 0
-                starttime = pygame.time.get_ticks()
-                won, lost = False, False
-                lose_time = None
+        for row in range(rows):
+            tile_row = []
+            for col in range(cols):
+                tile = Tile(col * tile_size, row * tile_size, tile_size)
+                tile_row.append(tile)
+                self.add(tile)
+            self.tiles.append(tile_row)
 
+        self.place_mines()
+
+    def place_mines(self, num_mines = 20):
+        mines_placed = 0
+        while mines_placed < num_mines:
+            row = random.randint(0, self.rows - 1)
+            col = random.randint(0, self.cols - 1)
+            tile = self.tiles[row][col]
+            if not tile.is_mine:
+                tile.is_mine = True
+                mines_placed += 1
+        self.calculate_neighbors()
+
+    def calculate_neighbors(self):
+        directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        for row in range(self.rows):
+            for col in range(self.cols):
+                tile = self.tiles[row][col]
+                if tile.is_mine:
+                    continue
+                # Count neighboring mines
+                mine_count = 0
+                for dr, dc in directions:
+                    r, c = row + dr, col + dc
+                    if 0 <= r < self.rows and 0 <= c < self.cols and self.tiles[r][c].is_mine:
+                        mine_count += 1
+                tile.neighboring_mines = mine_count
+
+    def reveal_tile(self, row, col):
+        tile = self.tiles[row][col]
+        if tile.is_flagged:
+            return
+        tile.reveal()
+        if tile.is_mine:
+            return True
+        elif tile.neighboring_mines == 0:
+            self.reveal_neighbors(row, col)
+        return False
+
+    def reveal_all_mines(self):
+        for row in self.tiles:
+            for tile in row:
+                if tile.is_mine and not tile.is_revealed:
+                    tile.reveal()
+
+    def reveal_neighbors(self, row, col):
+        directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        for dr, dc in directions:
+            r, c = row + dr, col + dc
+            if 0 <= r < self.rows and 0 <= c < self.cols:
+                neighbor_tile = self.tiles[r][c]
+                if not neighbor_tile.is_revealed and not neighbor_tile.is_flagged:
+                    neighbor_tile.reveal()
+                    if neighbor_tile.neighboring_mines == 0:
+                        self.reveal_neighbors(r, c)
+class Game:
+    def __init__(self):
+        self.screen = pygame.display.set_mode((RESOLUTION))
+        pygame.display.set_caption(TITLE)
+        self.clock = pygame.time.Clock()
+        self.grid = Grid(DIMENSION, DIMENSION, TILESIZE)
+        self.playing = True
+        self.game_over = False
+
+    def new(self):
+        pygame.init()
+        self.grid = Grid(DIMENSION, DIMENSION, TILESIZE)
+        self.game_over = False  # Reset game-over state
+
+    def run(self):
+        while self.playing:
+            self.clock.tick(FPS)
+            self.event()
+            self.draw()
+
+    def draw(self):
+        self.screen.fill(DARKGREY)
+        self.grid.draw(self.screen)
         pygame.display.flip()
-	
-if __name__ == '__main__':
-	main()
+
+    def event(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit(0)
+            elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
+                x, y = event.pos
+                row = y // TILESIZE
+                col = x // TILESIZE
+                if event.button == 1:  # Left click
+                    mine_hit = self.grid.reveal_tile(row, col)
+                    if mine_hit:
+                        self.game_over = True
+                        print("Game Over!")
+                        self.grid.reveal_all_mines()
+                elif event.button == 3:  # Right click
+                    self.grid.tiles[row][col].toggle_flag()
+
+game = Game()
+
+while True:
+    game.new()
+    game.run()
