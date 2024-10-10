@@ -1,5 +1,24 @@
-from const import *
+import pygame
 import random
+
+# General
+DIMENSION = 16
+TILESIZE = 20
+RESOLUTION = (DIMENSION * TILESIZE, DIMENSION * TILESIZE)
+TITLE = 'PySweep'
+FPS = 60
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+DARKGREY = (40, 40, 40)
+LIGHTGREY = (100, 100, 100)
+GREEN = (0, 255, 0)
+DARKGREEN = (0, 200, 0)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, x, y, size):
         super().__init__()
@@ -10,7 +29,7 @@ class Tile(pygame.sprite.Sprite):
 
         self.image.fill(BLACK)
         self.inside.fill(LIGHTGREY)
-        self.image.blit(self.inside,(2, 2))
+        self.image.blit(self.inside, (2, 2))
 
         # Tile states
         self.is_mine = False
@@ -28,7 +47,7 @@ class Tile(pygame.sprite.Sprite):
                 font = pygame.font.SysFont("calibri", 14)
                 text = font.render(str(self.neighboring_mines), True, BLACK)
                 self.inside.blit(text, (self.rect.width / 4, self.rect.height / 4))
-        self.image.blit(self.inside,(2, 2))
+        self.image.blit(self.inside, (2, 2))
 
     def toggle_flag(self):
         if not self.is_revealed:
@@ -37,7 +56,7 @@ class Tile(pygame.sprite.Sprite):
                 self.inside.fill(YELLOW)
             else:
                 self.inside.fill(LIGHTGREY)
-        self.image.blit(self.inside,(2, 2))
+        self.image.blit(self.inside, (2, 2))
 
 class Grid(pygame.sprite.Group):
     def __init__(self, rows, cols, tile_size):
@@ -120,14 +139,14 @@ class Grid(pygame.sprite.Group):
 
 class Game:
     def __init__(self):
-        self.screen = pygame.display.set_mode((RESOLUTION))
+        pygame.init()  # Initialize pygame in the constructor
+        self.screen = pygame.display.set_mode(RESOLUTION)
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
         self.grid = Grid(DIMENSION, DIMENSION, TILESIZE)
         self.game_over = False
 
     def new(self):
-        pygame.init()
         self.grid = Grid(DIMENSION, DIMENSION, TILESIZE)
         self.game_over = False  # Reset game-over state
 
@@ -136,7 +155,6 @@ class Game:
             self.clock.tick(FPS)
             self.event()
             self.draw()
-        pygame.time.wait(1000)
 
     def draw(self):
         self.screen.fill(DARKGREY)
@@ -146,9 +164,7 @@ class Game:
     def event(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                self.game_over = True
-                quit(0)
+                self.game_over = True  # Stop the game loop
             elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
                 x, y = event.pos
                 row = y // TILESIZE
@@ -169,3 +185,5 @@ game = Game()
 while True:
     game.new()
     game.run()
+    pygame.quit()  # Ensure pygame quits after the game loop ends
+    break  # Exit the while loop
