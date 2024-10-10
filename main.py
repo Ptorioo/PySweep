@@ -10,7 +10,6 @@ class Tile(pygame.sprite.Sprite):
 
         self.image.fill(BLACK)
         self.inside.fill(LIGHTGREY)
-        self.image.blit(self.image,(0, 0))
         self.image.blit(self.inside,(2, 2))
 
         # Tile states
@@ -148,6 +147,7 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+                self.game_over = True
                 quit(0)
             elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
                 x, y = event.pos
