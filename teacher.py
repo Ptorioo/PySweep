@@ -4,6 +4,7 @@ import random
 # General
 DIMENSION = 16
 TILESIZE = 20
+MINE_NUM = 20
 RESOLUTION = (DIMENSION * TILESIZE, DIMENSION * TILESIZE)
 TITLE = 'PySweep'
 FPS = 60
@@ -76,7 +77,7 @@ class Grid(pygame.sprite.Group):
 
         self.place_mines()
 
-    def place_mines(self, num_mines=20):
+    def place_mines(self, num_mines=MINE_NUM):
         mines_placed = 0
         while mines_placed < num_mines:
             row = random.randint(0, self.rows - 1)
